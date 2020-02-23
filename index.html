@@ -1,0 +1,561 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+  <title>Infra</title>
+  <!-- bootstrap  -->
+  <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+    integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+    integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+    crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+    integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+    crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+    integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+  <!-- All above bootsrtap -->
+
+
+
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+  <!-- <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css"
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"
+    ></script> -->
+  <!-- <link rel="stylesheet" type="text/css" href="index.css" /> -->
+  <style>
+
+    html, body {
+        height: 100%;
+        padding: 0;
+        margin: 0;
+      }
+      #map {
+        /* configure the size of the map */
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        
+      }
+    
+      .pop-up::-webkit-scrollbar {
+        display: none;
+      }
+      .pop-up{
+        /* width: 200px; */
+        max-height: 500px;
+        overflow-y: scroll;
+        /* overflow-y: hidden; */
+        /* overflow-x: hidden; */
+      }
+    
+    
+      #map .button-to-add input[type=button]{
+        position: absolute;
+        /* left:85%; */
+        bottom:25px;
+        right:25px;
+        border-style: solid;
+        border: 2px;
+        border-radius: 37.5px;
+        background-color: brown;
+        text-align: center;
+        line-height: 0px;
+        font-size: 70px;
+        padding-top: 0px;
+        color:white;
+        /* right:65%; */
+        height:75px;
+        z-index: 2;
+        width:75px;
+      }
+    
+      .container{
+        border-color: crimson;
+        /* position: absolute; */
+        top: 0px;
+        z-index: 0;
+        width: 100%;
+        /* display:none; */
+      }
+    
+      .container .close button{
+        position: relative;
+        height:50px;
+        width:100px;
+        text-align: center;
+        line-height: 0px;
+      }
+    
+      .container #issMap{
+        border: darkgreen;
+        position: relative;
+        /* margin-right: 20px; */
+        /* margin-left: 20px; */
+        height: 500px;
+        width: 100%;
+      }
+    
+      
+      
+        </style>
+
+
+</head>
+
+<body>
+  <div id="map">
+    <!-- <h3>Super-Infra</h3> -->
+    <form onclick='button_add_press("map")' class="button-to-add"><input type="button" value="+"></input></form>
+  </div>
+
+  <div class="container" style="padding-top: 100px;">
+    <div class="close pull-left">
+      <button class="pull-left" onclick='button_add_press("map")'>Close</button>
+    </div>
+    <center><h1><b>Report incidents on a given road!</b></h1></center>
+    <form action="https://superroad.herokuapp.com/write" 
+    method="POST" enctype="multipart/form-data" name="myForm" >
+    <!-- onSubmit="return validateForm(this)" -->
+      <div class="form-group">
+          <!-- <label for="ISBN">ISBN</label> -->
+          <!-- <input class="form-control" name="lat"> -->
+          <input type="hidden"  id="lat" name="lat" value="1">
+          <input type="hidden"  id="lng" name="lng" value="1">
+      </div>
+
+      <div class="form-group">
+          <label for="Tags">Tags</label>
+          <input class="form-control" id ="tag" name="tag">
+      </div>
+
+      <div class="form-group">
+          <label for="Title">Description</label>
+          <input class="form-control" id="description" name="description">
+      </div>
+
+      <div class="form-group">
+          <label for="Image">Image</label>
+          <input type="file"  id ="image" name="avatar">
+      </div>
+
+      <!--Other fields-->
+      <button type="submit" class="btn btn-primary" style="width: 200px;">Submit</button>
+  </form>
+
+    <p></p>
+    <div id="issMap" height=200px></div>
+  </div>
+
+
+
+
+
+
+  <script>
+
+    var yahIcon = L.icon({
+      iconUrl: 'yah.png',
+
+      iconSize: [50, 50], // size of the icon
+      iconAnchor: [25, 50], // point of the icon which will correspond to marker's location
+      popupAnchor: [-3, -76] // point from which the popup should open relative to the iconAnchor
+    });
+
+
+    var selectedIcon = L.icon({
+      iconUrl: 'final.png',
+
+      iconSize: [50, 50], // size of the icon
+      iconAnchor: [25, 50], // point of the icon which will correspond to marker's location
+      popupAnchor: [-3, -76] // point from which the popup should open relative to the iconAnchor
+    });
+    var xweb = 0;
+    var dataPoints = [];
+    var yweb = 0;
+    var geoLoc;
+    var watchID;
+    var map = L.map('map').setView({ lon: 0, lat: 0 }, 4);
+    var mymap = L.map('issMap').setView({ lon: 0, lat: 0 }, 16);
+
+    function getLocation() {
+      if (navigator.geolocation) {
+        geoloc = navigator.geolocation;
+        watchID = geoloc.watchPosition(showPosition);
+        console.log("1");
+      } else {
+        x.innerHTML = "Geolocation is not supported by this browser.";
+      }
+
+
+    }
+
+    function showPosition(position) {
+      console.log("2");
+      yweb = position.coords.latitude;
+      xweb = position.coords.longitude;
+      console.log(xweb + ' ' + yweb);
+      geoloc.clearWatch(watchID);
+
+      trial()
+    }
+
+    function trial() {
+      console.log("Running this" + xweb + ' ' + yweb);
+      document.getElementById('lat').setAttribute('value', xweb);
+      document.getElementById('lng').setAttribute('value', yweb);
+      map.setView({ lon: xweb, lat: yweb }, 18);
+      mymap.setView({ lon: xweb, lat: yweb }, 18);
+      L.marker({ lon: xweb, lat: yweb }, { icon: yahIcon }).addTo(map);
+      L.marker({ lon: xweb, lat: yweb }, { icon: yahIcon }).addTo(mymap);
+      console.log("set-defaults" + xweb + "," + yweb);
+    }
+    getLocation();
+
+    secondFunction();
+
+    // var markerHolder=[];
+    // var shelterMarker1= new L.FeatureGroup();
+    // var shelterMarker2 = new L.FeatureGroup();
+    // initialize Leaflet
+    function secondFunction() {
+      // console.log(xweb+' '+yweb);
+
+      map.locate({ setView: true, maxZoom: 14 });
+      // map = L.map('map').setView({lon: 3, lat: 3}, 6);
+      // add the OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+        , noWrap: true
+      }).addTo(map);
+      L.control.scale().addTo(map);
+      // const data = "localhost:3000/all";
+      const data = "https://superroad.herokuapp.com/all";
+      var request = new Request(data);
+      fetch(request).then(function (response) {
+        return response.text();
+      }).then(function (text) {
+        var objectJson = JSON.parse(text);
+        objectJson.forEach(x => {
+          console.log(x.lng+","+x.lat+","+x.data);
+          // markerHolder.push(pointOperation(x.lng,x.lat,x.data));
+          pointOperation(x.lng, x.lat, x.data);
+          pointOperation2(x.lng, x.lat, x.data);
+          dataPoints.push([x.lng, x.lat, 0]);
+        });
+        //           console.log(markerHolder.length);
+        //           populateZoomMap();
+        //           for(i=0;i<shelterMarker.length;i++){
+        //             map.on('zoomend', function() {
+        //     if (map.getZoom() <i+1){
+        //             map.removeLayer(shelterMarker[i]);
+        //     }
+        //     else {
+        //             map.addLayer(shelterMarker[i]);
+        //         }
+        // });
+        //           }
+        //           for(i=0;i<markerHolder.length;i++){
+        //             markerHolder[i].addTo(map);
+        //           }
+        //           map.addLayer(shelterMarker2);
+        //           map.on('zoomend', function() {
+        //     if (map.getZoom() >12){
+        //             map.removeLayer(shelterMarkers1);
+        //     }
+        //     else {
+        //             map.addLayer(shelterMarkers1);
+        //         }
+        // });
+        valueNodes();
+        for (i = 0; i < dataPoints.length; i++) {
+          console.log(dataPoints[i]);
+        }
+        mapStatistics();
+
+      });
+
+
+      function splitIntoTwo() {
+        // var temp = markerHolder.slice(0.9*markerHolder.length);
+        markerHolder.slice(0.9 * markerHolder.length).forEach(element => {
+          shelterMarker1.push(element);
+        });
+        markerHolder.slice(-0.1 * markerHolder.length).forEach(element => {
+          shelterMarker2.push(element);
+        });
+      }
+      var counter = 1;
+      function pointOperation(x, y, array) {
+        function rendersList(array) {
+          var outputString = "<div class=\"pop-up\">";
+          array.forEach(element => {
+            let post = element;
+            outputString += "<div class=\"card\" style=\"width: 18rem;\">"
+            outputString += '<img src="http://superroad.herokuapp.com/' + post.image + '" class="card-img-top">';
+            outputString += "<div class=\"card-body\">"
+            outputString += "<h5 class=\"card-title\">" + post.time + "</h5>"
+            outputString += "<p class=\"card-text\">" + post.description + "</p>"
+            outputString += "<p class=\"card-text\">";
+            post.tags.forEach(ele => {
+              outputString += ele + ",";
+            });
+            outputString = outputString.substring(0, outputString.length - 1);
+            outputString += "</p>";
+            outputString += "</div> </div>"
+            outputString += "</br>"
+          });
+          return outputString + "</div>";
+        }
+
+
+        // return L.marker({lon: x,lat: y});
+
+        if (counter % 10 == 0) {
+          L.marker({ lon: x, lat: y }).bindPopup(rendersList(array)).addTo(map);
+        }
+        counter = counter + 1;
+        // L.marker({lon: x, lat: y}).bindPopup(rendersList(array)).addTo(mymap);
+      }
+
+      function split(arr, n) {
+        var res = [];
+        while (arr.length) {
+          res.push(arr.splice(0, n));
+        }
+        return res;
+      }
+
+
+      function populateZoomMap() {
+        function split(arr, n) {
+          var res = [];
+          while (arr.length) {
+            res.push(arr.splice(0, n));
+          }
+          return res;
+        }
+        console.log("markerHolder", markerHolder.length);
+        markerHolder = split(markerHolder, 19);
+        console.log("markerHolder", markerHolder.length);
+        for (i = 0; i < 19; i++) {
+          shelterMarker.push(new L.FeatureGroup());
+          for (j = 0; j < markerHolder.length; j++) {
+            shelterMarker.push(markerHolder[i][j])
+          }
+        }
+      }
+      var counter1 = 0;
+      function pointOperation2(x, y, array) {
+        function rendersList(array) {
+          var outputString = "<div class=\"pop-up\">";
+          array.forEach(element => {
+            let post = element;
+            outputString += "<div class=\"card\" style=\"width: 18rem;\">"
+            outputString += '<img src="http://superroad.herokuapp.com/' + post.image + '" class="card-img-top">';
+            outputString += "<div class=\"card-body\">"
+            outputString += "<h5 class=\"card-title\">" + post.time + "</h5>"
+            outputString += "<p class=\"card-text\">" + post.description + "</p>"
+            outputString += "<p class=\"card-text\">";
+            post.tags.forEach(ele => {
+              outputString += ele + ",";
+            });
+            outputString = outputString.substring(0, outputString.length - 1);
+            outputString += "</p>";
+            outputString += "</div> </div>"
+            outputString += "</br>"
+          });
+          return outputString + "</div>";
+        }
+        // L.marker({lon: x, lat: y}).bindPopup(rendersList(array)).addTo(map);
+        if (counter1 % 10 == 0) {
+          L.marker({ lon: x, lat: y }).bindPopup(rendersList(array)).addTo(mymap);
+        }
+        counter1 = counter1 + 1;
+      }
+
+      function valueNodes() {
+        function sortFunction(a, b) {
+          if (a[0] === b[0]) {
+            return 0;
+          }
+          else {
+            return (a[0] < b[0]) ? -1 : 1;
+          }
+        }
+        dataPoints.sort(sortFunction);
+        var limit = 0.005;
+        for (i = 0; i < dataPoints.length; i++) {
+          try {
+            var j = i;
+            while (Math.abs(dataPoints[j + 1][0] - dataPoints[i][0]) < limit) {
+              if (Math.abs(dataPoints[j + 1][1] - dataPoints[i][1]) < limit) {
+                dataPoints[i][2] = dataPoints[i][2] + 1;
+              }
+              j = j + 1;
+            }
+          }
+          catch (err) {
+
+          }
+          try {
+            var j = i;
+            while (Math.abs(dataPoints[j - 1][0] - dataPoints[i][0]) < limit) {
+              if (Math.abs(dataPoints[j - 1][1] - dataPoints[i][1]) < limit) {
+                dataPoints[i][2] = dataPoints[i][2] + 1;
+              }
+              j = j - 1;
+            }
+          } catch (err) {
+
+          }
+        }
+      }
+
+      function mapStatistics() {
+        function findMaxandMin() {
+          var max = 0;
+          var min = 0;
+          for (i = 0; i < dataPoints.length; i++) {
+            if (dataPoints[i][2] > max) {
+              max = dataPoints[i][2];
+            }
+          }
+          min = max;
+          for (i = 0; i < dataPoints.length; i++) {
+            if (dataPoints[i][2] < min) {
+              min = dataPoints[i][2];
+            }
+          }
+          return [max, min];
+        }
+        var max = findMaxandMin()[0];
+        console.log(max);
+        // var min = findMaxandMin()[1];
+        var gradient = max / 5;
+        console.log(gradient);
+        for (i = 0; i < dataPoints.length; i++) {
+          // console.log(dataPoints[i][1],dataPoints[i][0]);
+          var value = Math.floor(dataPoints[i][2] / gradient);
+          console.log(value);
+          switch (value) {
+            case 0:
+              L.circle([dataPoints[i][1], dataPoints[i][0]], 50, { color: 'white', opacity: .5, weight: 0 }).addTo(map);
+              break;
+            case 1:
+              L.circle([dataPoints[i][1], dataPoints[i][0]], 50, { color: 'yellow', opacity: .5, weight: 0 }).addTo(map);
+              break;
+            case 2:
+              L.circle([dataPoints[i][1], dataPoints[i][0]], 50, { color: 'orange', opacity: .5, weight: 0 }).addTo(map);
+              break;
+            case 3:
+              L.circle([dataPoints[i][1], dataPoints[i][0]], 50, { color: 'red', opacity: .3, weight: 0 }).addTo(map);
+              break;
+            case 4:
+              L.circle([dataPoints[i][1], dataPoints[i][0]], 50, { color: 'red', opacity: .5, weight: 0 }).addTo(map);
+              break;
+            case 5:
+              L.circle([dataPoints[i][1], dataPoints[i][0]], 50, { color: 'red', opacity: .7, weight: 0 }).addTo(map);
+              break;
+          }
+
+        }
+      }
+
+      function validateForm(e) {
+        var x = document.getElementById("tag").value;
+        var y = document.getElementById("description").value;
+        console.log(x);
+        console.log(y);
+        if (x == "" || y == "") {
+          alert("Name must be filled out");
+          return false;
+          e.cancelBubble = true;
+        }
+        else {
+          return true;
+        }
+
+      }
+
+
+      const attribution =
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+      const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      const tiles = L.tileLayer(tileUrl, { attribution, noWrap: true });
+      tiles.addTo(mymap);
+      mymap.locate({ setView: true, maxZoom: 14 });
+      var isPointed = false;
+      var currentMarker = L.marker();
+      // currentMarker.on('click',onClickMarker);
+      function onMapClick(e) {
+        if (!isPointed) {
+          // alert("You clicked the map at " + e.latlng);
+          currentMarker = L.marker(e.latlng).addTo(mymap);
+
+          currentMarker.on('click', onClickMarker);
+          // document.getElementById('lat').setAttribute('value', e.latlng.lat);
+          // document.getElementById('lng').setAttribute('value', e.latlng.lng);
+          document.getElementById('lat').setAttribute('value', e.latlng.lat);
+          document.getElementById('lng').setAttribute('value', e.latlng.lng);
+          // document.getElementById("latText").innerHTML = e.latlng.lat;
+          // document.getElementById("lnText").innerHTML = e.latlng.lng;
+          isPointed = true;
+        }
+      }
+      mymap.on('click', onMapClick);
+
+      function onClickMarker(e) {
+        console.log(e);
+        // currentMarker.remove();
+        mymap.removeLayer(currentMarker);
+        isPointed = false;
+        document.getElementById('lat').setAttribute('value', xweb);
+        document.getElementById('lng').setAttribute('value', yweb);
+        // document.getElementById('lat').setAttribute('value', '1')
+        // document.getElementById('ln').setAttribute('value', '1')
+      }
+    }
+    // currentMarker.on('click',onClickMarker);
+
+    // secondFunction();
+
+
+    function button_add_press(value) {
+      var x = document.getElementById(value);
+
+      if (x.style.display === "none") {
+        x.style.display = "block";
+        console.log("map is none")
+      } else {
+        x.style.display = "none";
+        console.log("map is block")
+      }
+    }
+    function return_to_map() {
+      var y = document.getElementById("container");
+      console.log(y.style.display)
+      if (y.style.display === "none") {
+        y.style.display = "block";
+        console.log("container is none")
+      } else {
+        y.style.display = "none";
+        console.log("container is block")
+      }
+    }
+
+
+  </script>
+
+</body>
